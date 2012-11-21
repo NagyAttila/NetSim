@@ -1,0 +1,23 @@
+N;Server 1;171;118
+N;Server 2;171;274
+N;Server 3;171;429
+N;Client 1;995;25
+N;Client 2;995;113
+N;Client 3;995;198
+N;Client 4;995;283
+N;Client 5;995;368
+N;Client 6;995;453
+N;Client 7;995;538
+L;Server 1;Client 1;T
+L;Server 1;Client 2;T
+L;Server 1;Client 3;T
+L;Server 2;Client 3;T
+L;Server 2;Client 4;T
+L;Server 2;Client 5;T
+L;Server 2;Client 6;T
+L;Server 3;Client 5;T
+L;Server 3;Client 6;T
+L;Server 3;Client 7;T
+F;F
+H;V
+S;T

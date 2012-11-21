@@ -1,0 +1,15 @@
+N;A;11;282
+N;B;580;282
+N;D;1149;282
+N;E;580;10
+N;C;580;553
+L;A;E;F
+L;E;D;F
+L;D;C;F
+L;C;A;F
+L;A;B;T
+L;B;D;T
+L;E;B;T
+L;B;C;T
+F;T
+S;T
