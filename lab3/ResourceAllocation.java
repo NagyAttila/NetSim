@@ -9,7 +9,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 {
   private int clock;
   private Hashtable timestamps = new Hashtable();
-  private PriorityQueue<Request> requests = new PriorityQueue<Request>();
+  private PriorityQueue<MyMessage> requests = new PriorityQueue<MyMessage>();
 
   public String toString()
   {
@@ -19,55 +19,56 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
   protected void receiveMessage(Message message, InLink inLink) throws Exception
   {
     MyMessage msg = (MyMessage)message;
-    myNode.setWaken();
-    requests.add( msg.request );
-    myNode.writeLogg("HEAD:" + requests.peek().time);
+
+    if( msg.type == Type.REQUEST )
+    {
+      myNode.setWaken();
+      requests.add( msg );
+      myNode.writeLogg("HEAD:" + requests.peek().time);
+    }
   }
 
   public void trigg() throws Exception
   {
-    myNode.sendToAllOutlinks(new MyMessage(myNodeName, new Request(clock,myNodeName)));
+    myNode.sendToAllOutlinks(new MyMessage(myNodeName, clock, Type.REQUEST));
     clock++;
   }
 
-  private class MyMessage implements Message
+  private class MyMessage implements Message, Comparable<MyMessage>
   {
     String sender;
-    Request request;
-    private MyMessage(String sender, Request request)
+    int time;
+    Type type;
+    private MyMessage(String sender, int time, Type type)
     {
       this.sender = sender;
-      this.request = request;
+      this.time = time;
+      this.type = type;
     }
 
     public Message clone()
     {
-      return new MyMessage(sender, request);
+      return new MyMessage(sender, time, type);
     }
 
     public String getTag()
     {
       return sender;
     }
-  }
 
-  private class Request implements Comparable<Request>
-  {
-    private Request(int time, String sender)
-    {
-      this.time = time;
-      this.sender = sender;
-    }
-
-    public int compareTo(Request req)
+    public int compareTo(MyMessage req)
     {
       return this.time - req.time;
     }
-    
-    int time;
-    String sender;
   }
 
+
+  public enum Type 
+  {
+    REQUEST,
+      ACK,
+      RELEASE
+  }
 }
 
 
