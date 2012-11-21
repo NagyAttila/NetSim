@@ -45,7 +45,9 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     {
       sendRelease();
       myNode.setIdle();
-      hasResource = false;
+      //hasResource = false;
+      hasResource = checkResource();
+      if ( hasResource ) myNode.setWaken();
     }
     else
     {
