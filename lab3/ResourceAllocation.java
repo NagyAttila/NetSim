@@ -29,6 +29,10 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     {
       recvAck(msg);
     }
+    else if( msg.type == Type.RELEASE )
+    {
+      recvRelease(msg);
+    }
 
     hasResource = checkResource();
     if ( hasResource ) myNode.setWaken();
@@ -37,7 +41,16 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 
   public void trigg() throws Exception
   {
-    sendRequest();
+    if( hasResource )
+    {
+      sendRelease();
+      myNode.setIdle();
+      hasResource = false;
+    }
+    else
+    {
+      sendRequest();
+    }
   }
 
   private class MyMessage implements Message, Comparable<MyMessage>
@@ -64,6 +77,10 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 
     public int compareTo(MyMessage req)
     {
+      if(this.time == req.time) 
+      {
+        return this.sender.compareTo(req.sender);
+      }
       return this.time - req.time;
     }
   }
@@ -77,11 +94,11 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 
   private void sendRequest() throws NetworkBroken
   {
+    myNode.writeLogg("SendRequest");
     clock++;
     MyMessage msg = new MyMessage(myNodeName, clock, Type.REQUEST);
     myNode.sendToAllOutlinks(msg);
     queue.add(msg);
-    myNode.writeLogg("Size:" + queue.size());
   }
 
   private void recvRequest(MyMessage msg) throws NetworkBroken, NotFound
@@ -91,39 +108,63 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     table.put( msg.sender, msg.time );
     clock++;
     sendAck(msg.sender);
-    myNode.writeLogg("HEAD:" + queue.peek().time);
   }
 
   private void recvAck(MyMessage msg) 
   {
+    myNode.writeLogg("First req:" + queue.peek().time + " Sender: " + queue.peek().sender);
     clock = Math.max(clock,msg.time);
     table.put( msg.sender, msg.time );
     clock++;
-    myNode.writeLogg("ACK HEAD:" + queue.peek().time);
   }
 
   private void sendAck(String sender) throws NetworkBroken, NotFound
   {
+    myNode.writeLogg("SendAck");
     myNode.sendTo(sender,new MyMessage(myNodeName, clock, Type.ACK ));
+    clock++;
+  }
+
+  private void sendRelease() throws NetworkBroken
+  {
+    myNode.writeLogg("SendRelease");
+    clock++;
+    MyMessage msg = new MyMessage(myNodeName, clock, Type.RELEASE);
+    myNode.sendToAllOutlinks(msg);
+    queue.poll();
+  }
+
+  private void recvRelease(MyMessage msg) throws NetworkBroken, NotFound
+  {
+    clock = Math.max(clock,msg.time);
+    queue.poll();
+    table.put( msg.sender, msg.time );
     clock++;
   }
 
   private boolean checkResource()
   {
-    if( myNodeName.equals(queue.peek().sender) &&
-        myNode.getOutLinks().length == table.size() )
+    try
     {
-      for (int i : table.values()) 
+      if( myNodeName.equals(queue.peek().sender) &&
+          myNode.getOutLinks().length == table.size() )
       {
-        //myNode.writeLogg("i:" + i + " Clock:" + clock );
-        if (queue.peek().time >= i) 
+        for (int i : table.values()) 
         {
-          return false;
+          myNode.writeLogg("i:" + i + " Our req:" + queue.peek().time );
+          if (queue.peek().time >= i) 
+          {
+            return false;
+          }
         }
+        return true;
       }
-      return true;
+      return false;
     }
-    return false;
+    catch(Exception e)
+    {
+      return false;
+    }
   }
   
 }
