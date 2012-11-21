@@ -8,8 +8,8 @@ import java.util.PriorityQueue;
 public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 {
   private int clock;
-  private Hashtable timestamps = new Hashtable();
-  private PriorityQueue<MyMessage> requests = new PriorityQueue<MyMessage>();
+  private Hashtable table = new Hashtable();
+  private PriorityQueue<MyMessage> queue = new PriorityQueue<MyMessage>();
 
   public String toString()
   {
@@ -22,16 +22,17 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 
     if( msg.type == Type.REQUEST )
     {
-      myNode.setWaken();
-      requests.add( msg );
-      myNode.writeLogg("HEAD:" + requests.peek().time);
+      recvRequest(msg);
+    }
+    else if( msg.type == Type.ACK )
+    {
+      recvAck(msg);
     }
   }
 
   public void trigg() throws Exception
   {
-    myNode.sendToAllOutlinks(new MyMessage(myNodeName, clock, Type.REQUEST));
-    clock++;
+    sendRequest();
   }
 
   private class MyMessage implements Message, Comparable<MyMessage>
@@ -62,13 +63,47 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     }
   }
 
-
   public enum Type 
   {
     REQUEST,
       ACK,
       RELEASE
   }
+
+  private void sendRequest() throws NetworkBroken
+  {
+    clock++;
+    MyMessage msg = new MyMessage(myNodeName, clock, Type.REQUEST);
+    myNode.sendToAllOutlinks(msg);
+    queue.add(msg);
+    myNode.writeLogg("Size:" + queue.size());
+  }
+
+  private void recvRequest(MyMessage msg) throws NetworkBroken, NotFound
+  {
+    clock = Math.max(clock,msg.time);
+    queue.add( msg );
+    table.put( msg.sender, msg.time );
+    clock++;
+    sendAck(msg.sender);
+    myNode.writeLogg("HEAD:" + queue.peek().time);
+  }
+
+  private void recvAck(MyMessage msg) 
+  {
+    clock = Math.max(clock,msg.time);
+    table.put( msg.sender, msg.time );
+    clock++;
+    myNode.writeLogg("ACK HEAD:" + queue.peek().time);
+  }
+
+  private void sendAck(String sender) throws NetworkBroken, NotFound
+  {
+    myNode.sendTo(sender,new MyMessage(myNodeName, clock, Type.ACK ));
+    clock++;
+  }
+
 }
 
+//myNode.setWaken();
 
