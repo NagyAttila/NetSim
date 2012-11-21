@@ -8,8 +8,9 @@ import java.util.PriorityQueue;
 public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 {
   private int clock;
-  private Hashtable table = new Hashtable();
+  private Hashtable<String,Integer> table = new Hashtable<String,Integer>();
   private PriorityQueue<MyMessage> queue = new PriorityQueue<MyMessage>();
+  private boolean hasResource = false;
 
   public String toString()
   {
@@ -28,6 +29,10 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     {
       recvAck(msg);
     }
+
+    hasResource = checkResource();
+    if ( hasResource ) myNode.setWaken();
+
   }
 
   public void trigg() throws Exception
@@ -103,7 +108,23 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     clock++;
   }
 
+  private boolean checkResource()
+  {
+    if( myNodeName.equals(queue.peek().sender) &&
+        myNode.getOutLinks().length == table.size() )
+    {
+      for (int i : table.values()) 
+      {
+        //myNode.writeLogg("i:" + i + " Clock:" + clock );
+        if (queue.peek().time >= i) 
+        {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+  
 }
-
-//myNode.setWaken();
 
