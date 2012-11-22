@@ -11,7 +11,19 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
   private Hashtable<String,Integer> table = new Hashtable<String,Integer>();
   private PriorityQueue<MyMessage> queue = new PriorityQueue<MyMessage>();
   private boolean hasResource = false;
+  VisibleString[] visibleQueue = new VisibleString[3];
+  VisibleInteger visibleClock;
 
+  public void initiate(NodeInterface myNode)
+  {
+    super.initiate(myNode);
+    visibleClock = myNode.createVisibleInteger("Clock",clock);
+    visibleClock.setEditable(true);
+    for ( int c = 0; c < visibleQueue.length ; ++c )
+    {
+      visibleQueue[c] = myNode.createVisibleString("Element" + (c+1),"");
+    }
+  }
   public String toString()
   {
     return "ResourceAllocation";
@@ -57,7 +69,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     else
     {
       sendRequest();
-      setWaken();
+      myNode.setWaken();
     }
   }
 
@@ -103,7 +115,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
   private void sendRequest() throws NetworkBroken
   {
     myNode.writeLogg("Send Request");
-    clock++;
+    tickClock();
     MyMessage msg = new MyMessage(myNodeName, clock, Type.REQUEST);
     myNode.sendToAllOutlinks(msg);
     queue.add(msg);
@@ -115,7 +127,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     clock = Math.max(clock,msg.time);
     queue.add( msg );
     table.put( msg.sender, msg.time );
-    clock++;
+    tickClock();
     sendAck(msg.sender);
   }
 
@@ -124,20 +136,20 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     myNode.writeLogg("Receive Ack");
     clock = Math.max(clock,msg.time);
     table.put( msg.sender, msg.time );
-    clock++;
+    tickClock();
   }
 
   private void sendAck(String sender) throws NetworkBroken, NotFound
   {
     myNode.writeLogg("Send Ack");
     myNode.sendTo(sender,new MyMessage(myNodeName, clock, Type.ACK ));
-    clock++;
+    tickClock();
   }
 
   private void sendRelease() throws NetworkBroken
   {
     myNode.writeLogg("Send Release");
-    clock++;
+    tickClock();
     MyMessage msg = new MyMessage(myNodeName, clock, Type.RELEASE);
     myNode.sendToAllOutlinks(msg);
     queue.poll();
@@ -149,7 +161,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     clock = Math.max(clock,msg.time);
     queue.poll();
     table.put( msg.sender, msg.time );
-    clock++;
+    tickClock();
   }
 
   private boolean checkResource()
@@ -177,5 +189,10 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     }
   }
   
+  private void tickClock()
+  {
+    clock++;
+    visibleClock.setValue(clock);
+  }
 }
 
