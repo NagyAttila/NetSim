@@ -185,26 +185,20 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 
   private boolean checkResource()
   {
-    try
+    if( queue.peek() != null &&
+        myNodeName.equals(queue.peek().sender) &&
+        myNode.getOutLinks().length == table.size() )
     {
-      if( myNodeName.equals(queue.peek().sender) &&
-          myNode.getOutLinks().length == table.size() )
+      for (int i : table.values()) 
       {
-        for (int i : table.values()) 
+        if (queue.peek().time >= i) 
         {
-          if (queue.peek().time >= i) 
-          {
-            return false;
-          }
+          return false;
         }
-        return true;
       }
-      return false;
+      return true;
     }
-    catch(Exception e)
-    {
-      return false;
-    }
+    return false;
   }
   
   private void tickClock()
