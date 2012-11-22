@@ -93,7 +93,21 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 
     public String getTag()
     {
-      return sender;
+      String str = "";
+      if( type == Type.REQUEST )
+      {
+        str = "Request,";
+      }
+      else if( type == Type.ACK )
+      {
+        str = "Ack,";
+      }
+      else if( type == Type.RELEASE )
+      {
+        str = "Release,";
+      }
+
+      return str + sender + "," + time ;
     }
 
     public int compareTo(MyMessage req)
@@ -178,7 +192,6 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
       {
         for (int i : table.values()) 
         {
-          myNode.writeLogg("i:" + i + " Our req:" + queue.peek().time );
           if (queue.peek().time >= i) 
           {
             return false;
