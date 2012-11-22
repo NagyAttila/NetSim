@@ -1,6 +1,6 @@
 package lab3;
 
-
+import java.util.Arrays;
 import netsim.protocol.*;
 import java.util.Hashtable;
 import java.util.PriorityQueue;
@@ -24,6 +24,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
       visibleQueue[c] = myNode.createVisibleString("Element" + (c+1),"");
     }
   }
+
   public String toString()
   {
     return "ResourceAllocation";
@@ -119,6 +120,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     MyMessage msg = new MyMessage(myNodeName, clock, Type.REQUEST);
     myNode.sendToAllOutlinks(msg);
     queue.add(msg);
+    updateQueue();
   }
 
   private void recvRequest(MyMessage msg) throws NetworkBroken, NotFound
@@ -126,6 +128,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     myNode.writeLogg("Receive Request");
     clock = Math.max(clock,msg.time);
     queue.add( msg );
+    updateQueue();
     table.put( msg.sender, msg.time );
     tickClock();
     sendAck(msg.sender);
@@ -153,6 +156,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     MyMessage msg = new MyMessage(myNodeName, clock, Type.RELEASE);
     myNode.sendToAllOutlinks(msg);
     queue.poll();
+    updateQueue();
   }
 
   private void recvRelease(MyMessage msg) throws NetworkBroken, NotFound
@@ -160,6 +164,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     myNode.writeLogg("Receive Release");
     clock = Math.max(clock,msg.time);
     queue.poll();
+    updateQueue();
     table.put( msg.sender, msg.time );
     tickClock();
   }
@@ -193,6 +198,26 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
   {
     clock++;
     visibleClock.setValue(clock);
+  }
+
+
+  private void updateQueue()
+  {
+    for( VisibleString v : visibleQueue ) 
+    {
+      v.setValue("");
+    }
+
+    MyMessage[] reqArray = queue.toArray( new MyMessage[0] );
+    Arrays.sort(reqArray);
+    for (int i = 0; i < visibleQueue.length; ++i ) 
+    {
+      if( reqArray.length > i )
+      {
+        String str = reqArray[i].sender + ":" + reqArray[i].time;
+        visibleQueue[i].setValue(str);
+      }
+    }
   }
 }
 
