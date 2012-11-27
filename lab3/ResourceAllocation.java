@@ -8,9 +8,21 @@ import java.util.PriorityQueue;
 public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
 {
   private int clock;
+  
+  // The table of timestamps.
   private Hashtable<String,Integer> table = new Hashtable<String,Integer>();
+  
+  // Our request queue is a queue of messages, because the message class
+  // already contains all the information that a queue element would contain 
+  // anyway.
   private PriorityQueue<MyMessage> queue = new PriorityQueue<MyMessage>();
+  
+  // These two state variables keep track of whether this node has the 
+  // resource, and whether it is currently waiting for a request to be served.
   private boolean hasResource = false;
+  private boolean hasSentRequest = false;
+  
+  // Visible values for the GUI.
   VisibleString[] visibleQueue = new VisibleString[3];
   VisibleInteger visibleClock;
 
@@ -46,30 +58,30 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     {
       recvRelease(msg);
     }
-
+	
     hasResource = checkResource();
     if ( hasResource ) 
     {
       myNode.setActive();
     }
-
   }
 
   public void trigg() throws Exception
   {
-    if( hasResource )
+    // We're setting most of the state variables here (and not inside the "send"
+    // methods) because we want to confine them to as few places as possible to 
+    // avoid errors.
+    if( hasSentRequest )
     {
       sendRelease();
+      hasResource = false;
+      hasSentRequest = false;
       myNode.setIdle();
-      hasResource = checkResource();
-      if ( hasResource )
-      {
-        myNode.setActive();
-      }
     }
     else
     {
       sendRequest();
+      hasSentRequest = true;
       myNode.setWaken();
     }
   }
@@ -169,7 +181,7 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     tickClock();
     MyMessage msg = new MyMessage(myNodeName, clock, Type.RELEASE);
     myNode.sendToAllOutlinks(msg);
-    queue.poll();
+    removeRequest(myNodeName);
     updateQueue();
   }
 
@@ -177,15 +189,33 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
   {
     myNode.writeLogg("Receive Release");
     clock = Math.max(clock,msg.time);
-    queue.poll();
+    removeRequest(msg.sender);
     updateQueue();
     table.put( msg.sender, msg.time );
     tickClock();
   }
+  
+  // Remove the first request by the given sender. Since a node can not send two
+  // requests without sending a release in-between, there will only be at most 
+  // one request from any given sender in the queue at any given time.
+  private void removeRequest(String targetSender) {
+    MyMessage target = null; // The request to remove; will be set below.
+    for ( MyMessage request : queue ) {
+      if ( targetSender.equals(request.sender) ) {
+        target = request;
+        break;
+      }
+    }
+    queue.remove(target);
+  }
 
+  // Return true if this node can claim the resource.
   private boolean checkResource()
   {
-    if( queue.peek() != null &&
+	// If this node sent the first request in the queue, check if all the 
+	// timestamps are up-to-date. If one or more timestamps have not yet 
+	// arrived at all, we wait for them.
+    if( queue.peek() != null && 
         myNodeName.equals(queue.peek().sender) &&
         myNode.getOutLinks().length == table.size() )
     {
@@ -206,7 +236,6 @@ public class ResourceAllocation extends netsim.protocol.ProtocolAdapter
     clock++;
     visibleClock.setValue(clock);
   }
-
 
   private void updateQueue()
   {
